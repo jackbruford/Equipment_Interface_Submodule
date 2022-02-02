@@ -56,7 +56,7 @@ class tc08():
                     print("Failed to set channel number ",str(i))
                     error_code = self.picodll.usb_tc08_get_last_error(self.handle)
                     print("Error code: ",error_code)
-                     raise ConnectionError("Could not connect to temperature logger")
+                    raise ConnectionError("Could not connect to temperature logger")
                 if channels.get(i) != ' ':
                    numchannels = numchannels + 1 
             self.channels = channels  
