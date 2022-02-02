@@ -121,7 +121,7 @@ class tc08():
         
 class ADC_20():
     def __init__(self):
-        pico_adr = "C:/Program Files/Pico Technology/PicoLog 6/picohrdl.dll"
+        pico_adr = "C:/Program Files/Pico Technology/PicoLog/picohrdl.dll"
         self.picodll = cdll.LoadLibrary(pico_adr)
         self.handle = None
         self.channels = {}
