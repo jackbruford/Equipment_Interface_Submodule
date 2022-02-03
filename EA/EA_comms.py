@@ -351,7 +351,7 @@ class PS2400B(EaDevice):
         Init method for PS2400B device, takes v_nom as a parameter which is the power supply max voltage (either 42 or 84)
         """
         super().__init__()
-        if v_nom != 42 or vnom != 84:
+        if v_nom != 42 or v_nom != 84:
             raise ValueError("Max voltage of the EA2400 series owned by PEG group is 42 or 84 V. Enter 42 or 84.")
         self.ser = serial.Serial()
         self.state = {}
