@@ -114,6 +114,11 @@ class tc08():
                                                           ctypes.byref(timeBuffer), buffer_length,
                                                           ctypes.byref(overflow),
                                                           channel, 0, 0)
+            if num_readings == -1:
+               print("Error occurred when running device.")
+               error_code = self.picodll.usb_tc08_get_last_error(self.handle)
+               print("Error code: ", error_code)
+               raise ConnectionError("Could not connect to temperature logger")
             if channel == 1:
                 measurement.append(timeBuffer[0] / 1000)
             measurement.append(tempBuffer[0])
@@ -236,32 +241,38 @@ class ADC_20():
             print("Error occurred when running device.")
             raise ConnectionError("Could not connect to data logger")
         else:
+            self.failed_measurements = 0
             print("Running tc-08 with sample interval of ", self.interval, " ms")
         return self.interval
 
-    def record(self):
+    def record(self, failures = 3):
         '''Obtains data from the logger and returns an array with the form 
         [TIME, DATA1, DATA2...]
         '''
-        ready = self.picodll.HRDLReady(self.handle)
-        if not ready:
-            print("Logger not ready for data retrieval")
-            measurement = None
+        if self.failed_measurments > failures:
+            print(str(failures) + ' consecutive failed measurements ')
+            raise ConnectionError("Could not connect to data logger")
         else:
-            measurement = []
-            timeBuffer = self.buffers[0];
-            overflow = (ctypes.c_int)()
-            sampleBuffer = self.buffers[1];
-            num_readings = self.picodll.HRDLGetTimesAndValues(self.handle, ctypes.byref(timeBuffer),
-                                                              ctypes.byref(sampleBuffer), ctypes.byref(overflow),
-                                                              self.numsamples)
-            measurement.append(timeBuffer[0] / 1000)
-            for c in range(0, self.numchannels):
-                index = (self.numsamples - 1) * self.numchannels + c
-                sample_measurement = sampleBuffer[index] * self.channel_scaling[c]
-                measurement.append(sample_measurement)
-        return measurement
-
+            ready = self.picodll.HRDLReady(self.handle)
+            if not ready:
+                print("Logger not ready for data retrieval")
+                measurement = None
+                self.failed_measurements = self.failed_measurements + 1
+            else:
+                measurement = []
+                timeBuffer = self.buffers[0]
+                overflow = (ctypes.c_int)()
+                sampleBuffer = self.buffers[1]
+                num_readings = self.picodll.HRDLGetTimesAndValues(self.handle, ctypes.byref(timeBuffer),
+                                                                  ctypes.byref(sampleBuffer), ctypes.byref(overflow),
+                                                                  self.numsamples)
+                measurement.append(timeBuffer[0] / 1000)
+                for c in range(0, self.numchannels):
+                    index = (self.numsamples - 1) * self.numchannels + c
+                    sample_measurement = sampleBuffer[index] * self.channel_scaling[c]
+                    measurement.append(sample_measurement)
+                self.failed_measurements = 0
+            return measurement
     def stop(self):
         '''Stops the logger from streaming'''
         self.picodll.HRDLStop(self.handle)
