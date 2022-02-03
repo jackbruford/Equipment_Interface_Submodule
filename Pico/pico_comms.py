@@ -259,17 +259,17 @@ if __name__ ==    "__main__":
     try:
         adc.openUnit()
         adc.setChannels(channels)
-        adc.setSampleInterval(1000)
+        adc.setSampleInterval(500)
         adc.run()
         for x in range(0, 20):
-            time.sleep(1)
+            time.sleep(0.5)
             print(adc.record())
         adc.stop()
-        adc.closeUnit()      
+        adc.closeUnit()
     except Exception as e:
         print(e)
         adc.stop()
-        adc.closeUnit()        
+        adc.closeUnit()
         
 
     
