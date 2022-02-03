@@ -591,6 +591,7 @@ class PS2400B(EaDevice):
         data = self.decode_message(in_message)
         if len(data)<2:
             print("Expected data length:", (SD & 0b00001111) + 1)
+            print("in_message: ", in_message)
             self.ser.write(out_message)
             in_message = self.ser.read(11)
             data = self.decode_message(in_message)
