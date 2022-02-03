@@ -137,6 +137,7 @@ class EaDevice:
             print('WARNING: Unexpected data received. Data:\n', extra)
 
     def set_i(self, current):
+
         if current > self.curr_nom:
             print('WARNING: Requested current is greater than device maximum.')  # Ignoring request.')
             # return
@@ -345,10 +346,15 @@ class PSB9000():
             self.ser.write(bytes('SYST:LOCK 0\n', 'ascii'))
 
     def set_v(self, volt):
-        self.ser.write(bytes('SOURCE:VOLT ' + str(volt) + '\n', 'ascii'))
+        self.ser.write(bytes('SOUR:VOLT ' + str(volt) + 'V\n', 'ascii'))
 
-    def set_i(self, current):
-        self.ser.write(bytes('SINK:CURR ' + str(current) + '\n', 'ascii'))
+    def set_i(self, current, direction):
+        if direction == "SINK":
+            self.ser.write(bytes('SINK:CURR ' + str(current) + '\n', 'ascii'))
+        elif direction == "SOURCE":
+            self.ser.write(bytes('SOUR:CURR ' + str(current) + '\n', 'ascii'))
+        else:
+            raise ValueError("direction must be SINK or SOURCE")
 
     def query_output(self):
         self.ser.write(bytes('MEAS:VOLT?\n', 'ascii'))
@@ -386,7 +392,12 @@ class PSB9000():
             print(err_mess)
 
     def set_ovp_threshold(self, ovp):
-        self.ser.write(bytes('SOURCE:VOLT:PROT:' + str(ovp) + '\n', 'ascii'))
+        # TODO: Intermittently working. Seems to work best immediately after switch on
+        self.ser.write(bytes('VOLT:PROT ' + str(ovp) + '\n', 'ascii'))
+
+    def set_ocp_threshold(self, ocp):
+        # TODO: Intermittently working. Seems to work best immediately after switch on
+        self.ser.write(bytes('SOUR:CURR:PROT ' + str(ocp) + '\n', 'ascii'))
 
 class PS2400B(EaDevice):
     def __init__(self, v_nom):
