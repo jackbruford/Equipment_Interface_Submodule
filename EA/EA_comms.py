@@ -199,6 +199,7 @@ class PSI8000(EaDevice):
 #This class is for electronic loads in the EL9000 family.
 class EL9000(EaDevice):
     def __init__(self):
+        super().__init__()
         self.ser = serial.Serial()
         self.state = {}
         self.output = {'v':0,'i':0,'p':0}
@@ -342,3 +343,47 @@ class PSB9000():
             self.ser.write(bytes('SYST:ERR?\n','ascii'))
             err_mess = self.ser.readline().decode('utf-8')
             print(err_mess)
+
+
+class PS2400B(EaDevice):
+    def __init__(self, v_nom):
+        """
+        Init method for PS2400B device, takes v_nom as a parameter which is the power supply max voltage (either 42 or 84)
+        """
+        super().__init__()
+        if v_nom != 42 or vnom != 84:
+            raise ValueError("Max voltage of the EA2400 series owned by PEG group is 42 or 84 V. Enter 42 or 84.")
+        self.ser = serial.Serial()
+        self.state = {}
+        self.output = {'V_ps': 0, 'I_ps': 0}
+        self.volt_nom = v_nom
+        self.curr_nom = 10
+        self.p_nom = 160
+
+    def query_state_ps(self):
+        SD = self.make_SD(2, 1, 1, 1)
+        DN = 1  # device node is not necessarily 0. Needs to be set externally
+        OBJ = 71  # Actual Values and Device State Object
+        out_message = self.make_message(SD, DN, OBJ)
+        self.ser.write(out_message)
+        in_message = self.ser.read(11)
+        data = self.decode_message(in_message)  # The order is >>Remote
+        time.sleep(0.01)
+        if self.ser.inWaiting() > 0:
+            extra = self.ser.read_all()
+            # print('WARNING: Unexpected data received. Data:\n',extra)
+            # print ("Query state (PS) message: ", extra)
+        # build byte 0 which checks whether the device is in remote mode
+        self.state['remote'] = data[0] & 0b00000011  # 1 if device is in remote control mode (this is in byte 0)
+        # build byte 1 which checks whether the device is on, in which controller state, whether it's tracking, and whether protections for overcurrent, overvoltage, overpower etc are on
+        self.state['output_on'] = data[1] & 0b00000001  # 0 if the device is off
+        controller_states = {0: 'CV',
+                             2: 'CC'}
+        self.state['controller_state'] = controller_states[(data[1] & 0b00000110) >> 1]
+        self.state['tracking'] = (data[1] & 0b00001000) >> 3  # the data is sent to bit 3 in byte 1
+        self.state['OVP active'] = (data[1] & 0b00010000) >> 4  # the data is sent to bit 4 in byte 1
+        self.state['OCP active'] = (data[1] & 0b00100000) >> 5  # the data is sent to bit 5 in byte 1
+        self.state['OPP active'] = (data[1] & 0b01000000) >> 6  # the data is sent to bit 6 in byte 1
+        self.state['OTP active'] = (data[1] & 0b10000000) >> 7  # the data is sent to bit 7 in byte 1
+
+        print(self.state)
