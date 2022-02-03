@@ -245,11 +245,11 @@ class ADC_20():
             print("Running tc-08 with sample interval of ", self.interval, " ms")
         return self.interval
 
-    def record(self, failures = 3):
+    def record(self, failures = 1):
         '''Obtains data from the logger and returns an array with the form 
         [TIME, DATA1, DATA2...]
         '''
-        if self.failed_measurments > failures:
+        if self.failed_measurements >= failures:
             print(str(failures) + ' consecutive failed measurements ')
             raise ConnectionError("Could not connect to data logger")
         else:
