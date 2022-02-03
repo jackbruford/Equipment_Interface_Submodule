@@ -560,3 +560,30 @@ class PS2400B(EaDevice):
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
+
+    def query_output(self, channel):
+        SD = self.make_SD(6, 1, 1, 1)
+        OBJ = 71
+        if channel == 1:
+            DN = 0
+        elif channel == 2:
+            DN = 1
+        else:
+            raise ValueError("Not a valid channel")
+
+            # A conditional statement is needed in this area to account for the fact that the device node may
+        #  be 1 for the power supply
+
+        out_message = self.make_message(SD, DN, OBJ)
+        self.ser.write(out_message)
+        in_message = self.ser.read(11)
+        data = self.decode_message(in_message)
+        time.sleep(0.01)
+        if self.ser.inWaiting() > 0:
+            extra = self.ser.read_all()
+        #    print('WARNING: Unexpected data received. Data:\n',extra)
+        #    print ("Query output (PS) message: ", extra)
+        self.output['V_ps'] = self.volt_nom * (data[2] * (16 ** 2)) / 25600
+        self.output['I_ps'] = self.curr_nom * (data[4] * (16 ** 2)) / 25600
+
+        return self.output
