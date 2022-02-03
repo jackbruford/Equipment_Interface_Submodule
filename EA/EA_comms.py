@@ -594,6 +594,12 @@ class PS2400B(EaDevice):
             extra = self.ser.read_all()
         #    print('WARNING: Unexpected data received. Data:\n',extra)
         #    print ("Query output (PS) message: ", extra)
+        try:
+            self.output['V_ps'] = self.volt_nom * (data[2] * (16 ** 2)) / 25600
+            self.output['I_ps'] = self.curr_nom * (data[4] * (16 ** 2)) / 25600
+        except IndexError as e:
+            print("data: ", data)
+            raise e
         self.output['V_ps'] = self.volt_nom * (data[2] * (16 ** 2)) / 25600
         self.output['I_ps'] = self.curr_nom * (data[4] * (16 ** 2)) / 25600
 
