@@ -589,7 +589,7 @@ class PS2400B(EaDevice):
         self.ser.write(out_message)
         in_message = self.ser.read(11)
         data = self.decode_message(in_message)
-        if len(data)<1:
+        if len(data)<2:
             self.ser.write(out_message)
             in_message = self.ser.read(11)
             data = self.decode_message(in_message)
