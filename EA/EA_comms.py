@@ -618,6 +618,7 @@ class PS2400B(EaDevice):
             self.output['I_ps'] = self.curr_nom * (data[4] * (16 ** 2)) / 25600
         except IndexError as e:
             print("data: ", data)
+            print("datatype:",type(data))
             raise e
         self.output['V_ps'] = self.volt_nom * (data[2] * (16 ** 2)) / 25600
         self.output['I_ps'] = self.curr_nom * (data[4] * (16 ** 2)) / 25600
