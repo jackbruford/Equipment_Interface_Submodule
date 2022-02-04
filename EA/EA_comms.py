@@ -598,7 +598,7 @@ class PS2400B(EaDevice):
             data = self.decode_message(in_message)
             if type(data) is int:
                 raise ConnectionError("Receiving an int from the power supply, 1 reattempt made")
-        if type(data) is list:
+        if type(data) is bytes:
             if len(data) < 2:
                 print("Expected data length:", (SD & 0b00001111) + 1)
                 print("in_message: ", in_message)
