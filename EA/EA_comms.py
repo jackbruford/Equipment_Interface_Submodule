@@ -61,7 +61,7 @@ class EaDevice:
         # Check that checksum is correct
         CS = sum(message[0:-2])
         if (CS >> 8 != message[-2]) or (CS & 255 != message[-1]):
-            print('WARNING: Received checksum does not match transmission')
+            print('WARNING: Received checksum does not match transmission in EA device')
             return 1
         SD = message[0]
         data_length = (SD & 0b00001111) + 1
@@ -73,7 +73,7 @@ class EaDevice:
         data = message[3:-2]
         # Sanity checks
         if len(data) != data_length:
-            print('WARNING: Received data does not match stated length')
+            print('WARNING: Received data does not match stated length in EAdevice')
             return 1
         return data
 
@@ -84,6 +84,12 @@ class EaDevice:
         self.ser.write(out_message)
         in_message = self.ser.read(11)
         data = self.decode_message(in_message)
+        if data == 1:
+            self.ser.write(out_message)
+            in_message = self.ser.read(11)
+            data = self.decode_message(in_message)
+            if data == 1:
+                raise ConnectionError("An error occurred in EAdevice.query_output(), one retry attempted")
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
@@ -225,6 +231,12 @@ class PSI8000(EaDevice):
         self.ser.write(out_message)
         in_message = self.ser.read(7)
         data = self.decode_message(in_message)
+        if data == 1:
+            self.ser.write(out_message)
+            in_message = self.ser.read(7)
+            data = self.decode_message(in_message)
+            if data == 1:
+                raise ConnectionError("an error occured in EL9000.query_state(), 1 retry attempted")
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
@@ -257,6 +269,12 @@ class EL9000(EaDevice):
         self.ser.write(out_message)
         in_message = self.ser.read(7)
         data = self.decode_message(in_message)
+        if data == 1:
+            self.ser.write(out_message)
+            in_message = self.ser.read(7)
+            data = self.decode_message(in_message)
+            if data == 1:
+                raise ConnectionError("an error occured in EL9000.query_state(), 1 retry attempted")
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
@@ -439,6 +457,12 @@ class PS2400B(EaDevice):
         self.ser.write(out_message)
         in_message = self.ser.read(11)
         data = self.decode_message(in_message)  # The order is >>Remote
+        if data == 1:
+            self.ser.write(out_message)
+            in_message = self.ser.read(11)
+            data = self.decode_message(in_message)
+            if data == 1:
+                raise ConnectionError("an error occured in EL9000.query_state_ps(), 1 retry attempted")
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
@@ -590,14 +614,21 @@ class PS2400B(EaDevice):
         in_message = self.ser.read(11)
         data = self.decode_message(in_message)
 
-        if type(data) is int:
+        if data == 1:
             print("Expected data length:", (SD & 0b00001111) + 1)
             print("in_message: ", in_message)
             self.ser.write(out_message)
             in_message = self.ser.read(11)
             data = self.decode_message(in_message)
-            if type(data) is int:
-                raise ConnectionError("Receiving an int from the power supply, 1 reattempt made")
+            if data == 1:
+                time.sleep(0.1)
+                print("Expected data length:", (SD & 0b00001111) + 1)
+                print("in_message: ", in_message)
+                self.ser.write(out_message)
+                in_message = self.ser.read(11)
+                data = self.decode_message(in_message)
+                if data == 1:
+                    raise ConnectionError("Receiving an int from the power supply, 2 reattempt made in PS2400B.query_output")
         if type(data) is bytes:
             if len(data) < 2:
                 print("Expected data length:", (SD & 0b00001111) + 1)
@@ -605,8 +636,8 @@ class PS2400B(EaDevice):
                 self.ser.write(out_message)
                 in_message = self.ser.read(11)
                 data = self.decode_message(in_message)
-                if len(data)<2:
-                    raise ConnectionError("Receiving less than two bytes from from the power supply, 1 reattempt made")
+                if len(data) < 2:
+                    raise ConnectionError("Receiving less than two bytes frm from the power supply, 1 reattempt made")
 
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
