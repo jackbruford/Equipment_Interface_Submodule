@@ -393,8 +393,10 @@ class PSB9000():
     def output_on(self, output):
         if output == 1:
             self.ser.write(bytes('OUTP ON\n', 'ascii'))
+            self.ser.readline().decode('utf-8')
         else:
             self.ser.write(bytes('OUTP OFF\n', 'ascii'))
+            self.ser.readline().decode('utf-8')
 
     def read_alarm(self):
         # Read status subregister condition byte
