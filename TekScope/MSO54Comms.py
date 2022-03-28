@@ -73,6 +73,23 @@ class MSO54:
             raise ConnectionError('MSO54 not opened')
         self.inst.write("HORIZONTAL:MODE:SCALE " + str(T_per_division))
 
+    def set_vertical_scale(self, channel, units_per_division):
+        if not hasattr(self, 'inst'):
+            raise ConnectionError('MSO54 not opened')
+        self.inst.write("CH"+ str(channel) + ":SCALE " + str(units_per_division).format("e"))
+
+    def set_vertical_offset(self, channel, offset):
+        """
+        This command sets or queries the vertical offset for the specified analog channel.
+        :param channel: channel number
+        :param offset: offset for the channel
+        :return: None
+        """
+        if not hasattr(self, 'inst'):
+            raise ConnectionError('MSO54 not opened')
+        self.inst.write("CH"+ str(channel) + ":SCALE " + str(offset).format("e"))
+
+    def set_vertical
 
     def read(self):
         if not hasattr(self, 'inst'):
