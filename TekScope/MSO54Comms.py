@@ -59,7 +59,7 @@ class MSO54:
         self.inst.write('TRIG:A:LEVEL:CH1 10')
         self.inst.write('TRIG:A:MODE NORMAL')
         self.inst.write('ACQuire:StopAfter Sequence')
-
+        
     def arm(self):
         if not hasattr(self, 'inst'):
             raise ConnectionError('MSO54 not opened')
@@ -87,9 +87,19 @@ class MSO54:
         """
         if not hasattr(self, 'inst'):
             raise ConnectionError('MSO54 not opened')
-        self.inst.write("CH" + str(channel) + ":SCALE " + str(offset).format("e"))
+        self.inst.write("CH"+ str(channel) + ":OFFSET " + str(offset).format("e"))
 
-    # def set_vertical
+    def set_vertical_position(self, channel, position):
+        """
+        This command sets the vertical position for the specified analog channel.
+        :param channel: channel number
+        :param position: sets the position for the channel in divisions
+        :return: None
+        """
+        if not hasattr(self, 'inst'):
+            raise ConnectionError('MSO54 not opened')
+        self.inst.write("CH"+ str(channel) + ":POSITION " + str(position))
+
 
     def read(self):
         if not hasattr(self, 'inst'):
@@ -128,3 +138,5 @@ class MSO54:
         # Get time series
         self.wave['t'] = Ts * np.arange(1, self.N_SAMP)
         return self.wave
+
+
