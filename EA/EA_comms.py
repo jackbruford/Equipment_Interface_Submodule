@@ -3,8 +3,9 @@ import array
 import time
 import pdb
 
-WAITTIME = 0.1 # wait interval between retries
-RESPONSE_WAIT = 0.05 # wait interval between writing and reading to power supply
+WAITTIME = 2# wait interval between retries
+RESPONSE_WAIT = 0.1 # wait interval between writing and reading to power supply
+CHECK_DELAY = 1 # wait between setting a value and checking it
 # This is the base class for the PSI8000 and EL9000 EaDevices, and contains
 # common functionality implementing the RS232 communications
 class EaDevice:
@@ -320,7 +321,8 @@ class EL9000(EaDevice):
         self.query_output()
 
 
-# This class is for the PSB9000 bidirectional DC supply/load, using SCPI comms
+# This class is for the PSB9000 bidirectional DC supply/load, using SCPI comms. It also works for the PSI9750-06DT
+# On the PSI9750-06DT it was found necessary to increase the timeout to 500ms in the power supply communications menu
 class PSB9000():
     def __init__(self):
         self.ser = serial.Serial()
@@ -375,13 +377,14 @@ class PSB9000():
         retry_counter = 0
         while retry_counter < RETRIES:
             self.ser.write(bytes('SOUR:VOLT ' + str(volt) + 'V\n', 'ascii'))
+            time.sleep(CHECK_DELAY)
             self.ser.write(bytes('SOUR:VOLT?\n', 'ascii'))
             time.sleep(RESPONSE_WAIT)
             resp = self.ser.readline().decode('utf-8')
 
             if resp != '':
                 if float(resp.split('V')[0]) == volt:
-                    print("Voltage set to:", float(resp.split('V')[0]), " V, ", volt, " V requested")
+                    # print("Voltage set to:", float(resp.split('V')[0]), " V, ", volt, " V requested")
                     return 0
             print("Failed to set voltage, retrying. Response:", resp)
             retry_counter += 1
@@ -399,19 +402,20 @@ class PSB9000():
         while retry_counter < RETRIES:
             if direction == "SINK":
                 self.ser.write(bytes('SINK:CURR ' + str(current) + '\n', 'ascii'))
+                time.sleep(CHECK_DELAY)
                 self.ser.write(bytes('SINK:CURR?\n', 'ascii'))
                 time.sleep(RESPONSE_WAIT)
                 resp = self.ser.readline().decode('utf-8')
                 if resp != '':
                     if float(resp.split('A')[0]) == current:
-                        print("Current set to:", float(resp.split('A')[0]), " A")
+                        # print("Current set to:", float(resp.split('A')[0]), " A")
                         return 0
                 retry_counter += 1
                 time.sleep(WAITTIME)
                 print("Failed to set sink current, retrying. Response:", resp)
             elif direction == "SOURCE":
                 self.ser.write(bytes('SOUR:CURR ' + str(current) + '\n', 'ascii'))
-
+                time.sleep(CHECK_DELAY)
                 self.ser.write(bytes('SOURCE:CURRENT?\n', 'ascii'))
                 time.sleep(RESPONSE_WAIT)
                 resp = self.ser.readline().decode('utf-8')
@@ -457,8 +461,9 @@ class PSB9000():
             else:
                 self.ser.write(bytes('OUTP OFF\n', 'ascii'))
                 self.ser.readline().decode('utf-8')
-
+            time.sleep(CHECK_DELAY)
             self.ser.write(bytes('OUTPUT?\n', 'ascii'))
+            time.sleep(RESPONSE_WAIT)
             resp = self.ser.readline().decode('utf-8')
             if resp != '':
                 if (resp == "ON\n" and output == 1) or (resp == "OFF\n" and output == 0):
