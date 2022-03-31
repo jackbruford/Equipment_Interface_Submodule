@@ -3,7 +3,8 @@ import array
 import time
 import pdb
 
-
+WAITTIME = 0.1 # wait interval between retries
+RESPONSE_WAIT = 0.05 # wait interval between writing and reading to power supply
 # This is the base class for the PSI8000 and EL9000 EaDevices, and contains
 # common functionality implementing the RS232 communications
 class EaDevice:
@@ -175,7 +176,7 @@ class EaDevice:
 
     def set_OVP_threshold(self, ovp, channel):
         OVC = ovp
-        SD = self.make_SD(2,1,0,3)
+        SD = self.make_SD(2, 1, 0, 3)
         OBJ = 38
         if channel == 1:
             DN = 0
@@ -183,19 +184,19 @@ class EaDevice:
             DN = 1
         else:
             raise ValueError("Not a valid channel")
-        OVP_thre = int(25600 * OVC / self.set_v(1,channel))
-        data = (OVP_thre >>8, OVP_thre & 0b0000000011111111)
-        out_message = self.make_message(SD,DN,OBJ,data)
+        OVP_thre = int(25600 * OVC / self.set_v(1, channel))
+        data = (OVP_thre >> 8, OVP_thre & 0b0000000011111111)
+        out_message = self.make_message(SD, DN, OBJ, data)
         self.ser.write(out_message)
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
-        #    print('WARNING: Unexpected data received. Data:\n',extra)
-            print (extra)
+            #    print('WARNING: Unexpected data received. Data:\n',extra)
+            print(extra)
 
     def set_OCP_threshold(self, ocp, channel):
         OVC = ocp
-        SD = self.make_SD(2,1,0,3)
+        SD = self.make_SD(2, 1, 0, 3)
         OBJ = 39
         if channel == 1:
             DN = 0
@@ -203,14 +204,15 @@ class EaDevice:
             DN = 1
         else:
             raise ValueError("Not a valid channel")
-        OVC_thre = int(25600 * OVC / self.set_i(1,channel))
-        data = (OVC_thre >>8, OVC_thre & 0b0000000011111111)
-        out_message = self.make_message(SD,DN,OBJ,data)
+        OVC_thre = int(25600 * OVC / self.set_i(1, channel))
+        data = (OVC_thre >> 8, OVC_thre & 0b0000000011111111)
+        out_message = self.make_message(SD, DN, OBJ, data)
         self.ser.write(out_message)
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
         #    print('WARNING: Unexpected data received. Data:\n',extra)
+
 
 # This class is for devices in the PSI8000 family, and contains functions specific
 # to the control of power supplies
@@ -363,16 +365,66 @@ class PSB9000():
         elif remote == 0:
             self.ser.write(bytes('SYST:LOCK 0\n', 'ascii'))
 
-    def set_v(self, volt):
-        self.ser.write(bytes('SOUR:VOLT ' + str(volt) + 'V\n', 'ascii'))
+    def set_v(self, volt, RETRIES: int = 2):
+        """
+        Turns on or off the output of the power supply and checks that this has taken affect will retry a set number of
+        times, specified by RETRIES before raising an error
+        volt - int  Output voltage setpoint
+        RETRIES - int   Optional arguement specifying the number of retries before raising an erro
+        """
+        retry_counter = 0
+        while retry_counter < RETRIES:
+            self.ser.write(bytes('SOUR:VOLT ' + str(volt) + 'V\n', 'ascii'))
+            self.ser.write(bytes('SOUR:VOLT?\n', 'ascii'))
+            time.sleep(RESPONSE_WAIT)
+            resp = self.ser.readline().decode('utf-8')
 
-    def set_i(self, current, direction):
-        if direction == "SINK":
-            self.ser.write(bytes('SINK:CURR ' + str(current) + '\n', 'ascii'))
-        elif direction == "SOURCE":
-            self.ser.write(bytes('SOUR:CURR ' + str(current) + '\n', 'ascii'))
-        else:
-            raise ValueError("direction must be SINK or SOURCE")
+            if resp != '':
+                if float(resp.split('V')[0]) == volt:
+                    print("Voltage set to:", float(resp.split('V')[0]), " V, ", volt, " V requested")
+                    return 0
+            print("Failed to set voltage, retrying. Response:", resp)
+            retry_counter += 1
+            time.sleep(WAITTIME)
+        raise ConnectionError("After " + str(RETRIES) + " retries the voltage of the PS could not be set")
+
+    def set_i(self, current, direction, RETRIES:int =2):
+        """
+        Turns on or off the output of the power supply and checks that this has taken affect will retry a set number of
+        times, specified by RETRIES before raising an error
+        output - int    1 or 0, where 0 turns the PS off and 1 turns the PS on)
+        RETRIES - int   Optional arguement specifying the number of retries before raising an erro
+        """
+        retry_counter = 0
+        while retry_counter < RETRIES:
+            if direction == "SINK":
+                self.ser.write(bytes('SINK:CURR ' + str(current) + '\n', 'ascii'))
+                self.ser.write(bytes('SINK:CURR?\n', 'ascii'))
+                time.sleep(RESPONSE_WAIT)
+                resp = self.ser.readline().decode('utf-8')
+                if resp != '':
+                    if float(resp.split('A')[0]) == current:
+                        print("Current set to:", float(resp.split('A')[0]), " A")
+                        return 0
+                retry_counter += 1
+                time.sleep(WAITTIME)
+                print("Failed to set sink current, retrying. Response:", resp)
+            elif direction == "SOURCE":
+                self.ser.write(bytes('SOUR:CURR ' + str(current) + '\n', 'ascii'))
+
+                self.ser.write(bytes('SOURCE:CURRENT?\n', 'ascii'))
+                time.sleep(RESPONSE_WAIT)
+                resp = self.ser.readline().decode('utf-8')
+                if resp != '':
+                    if float(resp.split('A')[0]) == current:
+                        print("Current set to:", float(resp.split('A')[0]), " A")
+                        return 0
+                retry_counter += 1
+                time.sleep(WAITTIME)
+                print("Failed to set source current, retrying. Response:", resp)
+            else:
+                raise ValueError("direction must be SINK or SOURCE")
+        raise ConnectionError("After " + str(RETRIES) + " retries the current of the PS could not be set")
 
     def query_output(self):
         self.ser.write(bytes('MEAS:VOLT?\n', 'ascii'))
@@ -390,13 +442,30 @@ class PSB9000():
         self.output['p'] = p
         print(self.output)
 
-    def output_on(self, output):
-        if output == 1:
-            self.ser.write(bytes('OUTP ON\n', 'ascii'))
-            self.ser.readline().decode('utf-8')
-        else:
-            self.ser.write(bytes('OUTP OFF\n', 'ascii'))
-            self.ser.readline().decode('utf-8')
+    def output_on(self, output: int, RETRIES:int =2):
+        """
+        Turns on or off the output of the power supply and checks that this has taken affect will retry a set number of
+        times, specified by RETRIES before raising an error
+        output - int    1 or 0, where 0 turns the PS off and 1 turns the PS on)
+        RETRIES - int   Optional arguement specifying the number of retries before raising an erro
+        """
+        retry_counter = 0
+        while retry_counter < RETRIES:
+            if output == 1:
+                self.ser.write(bytes('OUTP ON\n', 'ascii'))
+                self.ser.readline().decode('utf-8')
+            else:
+                self.ser.write(bytes('OUTP OFF\n', 'ascii'))
+                self.ser.readline().decode('utf-8')
+
+            self.ser.write(bytes('OUTPUT?\n', 'ascii'))
+            resp = self.ser.readline().decode('utf-8')
+            if resp != '':
+                if (resp == "ON\n" and output == 1) or (resp == "OFF\n" and output == 0):
+                    return 0
+
+            retry_counter += 1
+        raise ConnectionError("After "+str(RETRIES) + " retries the output of the PS could not be set")
 
     def read_alarm(self):
         # Read status subregister condition byte
@@ -410,6 +479,7 @@ class PSB9000():
             self.ser.write(bytes('SYST:ERR?\n', 'ascii'))
             err_mess = self.ser.readline().decode('utf-8')
             print(err_mess)
+        return [err, err_mess]
 
     def set_ovp_threshold(self, ovp):
         # TODO: Intermittently working. Seems to work best immediately after switch on
@@ -418,6 +488,7 @@ class PSB9000():
     def set_ocp_threshold(self, ocp):
         # TODO: Intermittently working. Seems to work best immediately after switch on
         self.ser.write(bytes('SOUR:CURR:PROT ' + str(ocp) + '\n', 'ascii'))
+
 
 class PS2400B(EaDevice):
     def __init__(self, v_nom):
@@ -436,7 +507,7 @@ class PS2400B(EaDevice):
         self.curr_nom = 10
         self.p_nom = 160
 
-    def connect(self, port_string, brate=57600, parity= serial.PARITY_NONE, tout=2):
+    def connect(self, port_string, brate=57600, parity=serial.PARITY_NONE, tout=2):
         """Opens up a serial connection to the device"""
         try:
             self.ser.port = port_string
@@ -486,33 +557,33 @@ class PS2400B(EaDevice):
         print(self.state)
 
     def set_remote(self, remote, channel):
-        SD = self.make_SD(2,1,1,3)
+        SD = self.make_SD(2, 1, 1, 3)
         OBJ = 54
         if channel == 1:
             DN = 0
         elif channel == 2:
             DN = 1
         else:
-            raise ValueError("Not a valid channel")                                                             #Power supply control object
-        #DN = self.select_Output_Channel()
-        #A conditional statement may be required in this area to account for the
+            raise ValueError("Not a valid channel")  # Power supply control object
+        # DN = self.select_Output_Channel()
+        # A conditional statement may be required in this area to account for the
         # Device Node/Channel of the Power Supply
 
         if remote == 1:
-            data = (0x10, 0x10)                                                #Mask:0x10, remote on:1
+            data = (0x10, 0x10)  # Mask:0x10, remote on:1
         elif remote == 0:
-            data = (0x10, 0)                                                   #Mask:0x10, remote off:0
-        out_message = self.make_message(SD, DN, OBJ,data)
-        self.ser.write(out_message)                                            #This pyserial method writes to the output
+            data = (0x10, 0)  # Mask:0x10, remote off:0
+        out_message = self.make_message(SD, DN, OBJ, data)
+        self.ser.write(out_message)  # This pyserial method writes to the output
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
 
-    def set_v(self,voltage, channel):                                                    #applies to both the load and the power supply
+    def set_v(self, voltage, channel):  # applies to both the load and the power supply
         if voltage > self.volt_nom:
             print('WARNING: Requested voltage is greater than device maximum. Ignoring request.')
             return
-        SD = self.make_SD(2,1,1,3)
+        SD = self.make_SD(2, 1, 1, 3)
         OBJ = 50
         if channel == 1:
             DN = 0
@@ -521,8 +592,8 @@ class PS2400B(EaDevice):
         else:
             raise ValueError("Not a valid channel")
         v = int(25600 * voltage / self.volt_nom)
-        data = (v>>8, v & 0b0000000011111111)
-        out_message = self.make_message(SD,DN,OBJ,data)
+        data = (v >> 8, v & 0b0000000011111111)
+        out_message = self.make_message(SD, DN, OBJ, data)
         self.ser.write(out_message)
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
@@ -531,11 +602,11 @@ class PS2400B(EaDevice):
         #    print ("Set voltage (PS) message: ", extra)
         return v
 
-    def set_i(self, current, channel):                                                    #applies to both the load and the power supply
+    def set_i(self, current, channel):  # applies to both the load and the power supply
         if current > self.curr_nom:
             print('WARNING: Requested current is greater than device maximum. Ignoring request.')
             return
-        SD = self.make_SD(2,1,1,3)
+        SD = self.make_SD(2, 1, 1, 3)
         OBJ = 51
         if channel == 1:
             DN = 0
@@ -544,8 +615,8 @@ class PS2400B(EaDevice):
         else:
             raise ValueError("Not a valid channel")
         i = int(25600 * current / self.curr_nom)
-        data = (i>>8, i & 0b11111111)
-        out_message = self.make_message(SD,DN,OBJ,data)
+        data = (i >> 8, i & 0b11111111)
+        out_message = self.make_message(SD, DN, OBJ, data)
         self.ser.write(out_message)
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
@@ -555,45 +626,45 @@ class PS2400B(EaDevice):
         return i
 
     def output_on(self, output, channel):
-        SD = self.make_SD(2,1,1,3)
+        SD = self.make_SD(2, 1, 1, 3)
         OBJ = 54
         if channel == 1:
             DN = 0
         elif channel == 2:
             DN = 1
         else:
-            raise ValueError("Not a valid channel")                                                               #Power supply control object
+            raise ValueError("Not a valid channel")  # Power supply control object
         if output == 1:
-            data = (0x01, 0x01)                                                    #Mask, output
+            data = (0x01, 0x01)  # Mask, output
         elif output == 0:
-            data = (0x01, 0)                                                    #Mask, output
+            data = (0x01, 0)  # Mask, output
         out_message = self.make_message(SD, DN, OBJ, data)
         self.ser.write(out_message)
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
-            #print('WARNING: Unexpected data received. Data:\n',extra)
-            #print ("Turn on output (PS) message: ",extra)
+            # print('WARNING: Unexpected data received. Data:\n',extra)
+            # print ("Turn on output (PS) message: ",extra)
 
     def set_remote(self, remote, channel):
-        SD = self.make_SD(2,1,1,3)
+        SD = self.make_SD(2, 1, 1, 3)
         OBJ = 54
         if channel == 1:
             DN = 0
         elif channel == 2:
             DN = 1
         else:
-            raise ValueError("Not a valid channel")                                                             #Power supply control object
-        #DN = self.select_Output_Channel()
-        #A conditional statement may be required in this area to account for the
+            raise ValueError("Not a valid channel")  # Power supply control object
+        # DN = self.select_Output_Channel()
+        # A conditional statement may be required in this area to account for the
         # Device Node/Channel of the Power Supply
 
         if remote == 1:
-            data = (0x10, 0x10)                                                #Mask:0x10, remote on:1
+            data = (0x10, 0x10)  # Mask:0x10, remote on:1
         elif remote == 0:
-            data = (0x10, 0)                                                   #Mask:0x10, remote off:0
-        out_message = self.make_message(SD, DN, OBJ,data)
-        self.ser.write(out_message)                                            #This pyserial method writes to the output
+            data = (0x10, 0)  # Mask:0x10, remote off:0
+        out_message = self.make_message(SD, DN, OBJ, data)
+        self.ser.write(out_message)  # This pyserial method writes to the output
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
@@ -630,7 +701,8 @@ class PS2400B(EaDevice):
                 in_message = self.ser.read(11)
                 data = self.decode_message(in_message)
                 if data == 1:
-                    raise ConnectionError("Receiving an int from the power supply, 2 reattempt made in PS2400B.query_output")
+                    raise ConnectionError(
+                        "Receiving an int from the power supply, 2 reattempt made in PS2400B.query_output")
         if type(data) is bytes:
             if len(data) < 2:
                 print("Expected data length:", (SD & 0b00001111) + 1)
@@ -651,7 +723,7 @@ class PS2400B(EaDevice):
             self.output['I_ps'] = self.curr_nom * (data[4] * (16 ** 2)) / 25600
         except IndexError as e:
             print("data: ", data)
-            print("datatype:",type(data))
+            print("datatype:", type(data))
             raise e
         self.output['V_ps'] = self.volt_nom * (data[2] * (16 ** 2)) / 25600
         self.output['I_ps'] = self.curr_nom * (data[4] * (16 ** 2)) / 25600
