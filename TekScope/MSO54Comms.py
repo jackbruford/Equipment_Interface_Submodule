@@ -59,8 +59,22 @@ class MSO54:
         self.inst.write('TRIG:A:LEVEL:CH1 10')
         self.inst.write('TRIG:A:MODE NORMAL')
         self.inst.write('ACQuire:StopAfter Sequence')
-        
+
+    def run(self):
+        """
+        This command sets the scope to continually acquire data
+        :return:
+        """
+        if not hasattr(self, 'inst'):
+            raise ConnectionError('MSO54 not opened')
+        self.inst.write('ACQUIRE:STOPAFTER RUNSTOP')
+        self.inst.write('ACQuire:State RUN')
+
     def arm(self):
+        """
+        This comand sets the scope to capture a single waveform
+        :return:
+        """
         if not hasattr(self, 'inst'):
             raise ConnectionError('MSO54 not opened')
 
@@ -86,6 +100,9 @@ class MSO54:
         :param mode:
         :return:
         """
+        if not hasattr(self, 'inst'):
+            raise ConnectionError('MSO54 not opened')
+
         if mode != "SAMPLE" and mode != "HIRES":
             raise ValueError("Mode must be either 'SAMPLE' or 'HIRES'")
 
