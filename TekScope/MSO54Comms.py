@@ -25,7 +25,7 @@ class MSO54:
         self.inst = self.rm.open_resource(self.RESOURCE_STRING)
         # On some PC this doesnt work if the following two lines are uncommented
         # self.inst.read_termination = '\n'
-        # self.inst.write_termination = '\n'
+        self.inst.write_termination = '\n'
         self.inst.timeout = 1000
         try:
             print("Opened connection with ", self.inst.query('*IDN?;'))
@@ -138,7 +138,14 @@ class MSO54:
         """
         if not hasattr(self, 'inst'):
             raise ConnectionError('MSO54 not opened')
-        self.inst.write("CH"+ str(channel) + ":OFFSET " + str(offset).format("e"))
+        self.inst.write("CH" + str(channel) + ":OFFSET " + str(offset).format("e"))
+
+
+    def get_vertical_offset(self, ch: int):
+        if not hasattr(self, 'inst'):
+            raise ConnectionError('MSO54 not opened')
+        offset = self.inst.query("CH"+str(ch)+":OFFSET?")
+        return float(offset)
 
     def set_vertical_position(self, channel, position):
         """
@@ -149,7 +156,7 @@ class MSO54:
         """
         if not hasattr(self, 'inst'):
             raise ConnectionError('MSO54 not opened')
-        self.inst.write("CH"+ str(channel) + ":POSITION " + str(position))
+        self.inst.write("CH" + str(channel) + ":POSITION " + str(position))
 
     def set_horizontal_position(self, position):
         """
@@ -161,6 +168,14 @@ class MSO54:
         position: float - position as a percentage of the screen width
         """
         self.inst.write("HORIZONTAL:POSITION " + str(position))
+
+    def get_horizontal_position(self):
+        """
+        This command queries the horizontal position as a percent of screen
+        width.
+        :return float - position as a percentage of the screen width
+        """
+        return float(self.inst.write("HORIZONTAL:POSITION?"))
 
     def set_set_viewstyle(self, mode, waveveiw = 1):
         """
@@ -272,6 +287,21 @@ class MSO54:
         """
         return int(self.inst.query("HORIZONTAL:DIVISIONS?"))
 
+    def measure_cursor_horizontal_poition(self, position, channel):
+        if channel > 4 or channel < 1:
+            raise ValueError("Invalid channel number")
+        self.inst.write("DISplay:WAVEView1:CURSor:CURSOR1:STATE ON")
+        self.inst.write("DISplay:WAVEView1:CURSor:CURSOR1:ASOUrce Ch"+str(channel))
+        self.inst.write("DISPLAY:WAVEVIEW1:CURSOR:CURSOR1:FUNCTION WAVEFORM")
+        self.inst.write("DISplay:WAVEView1:CURSor:CURSOR1:WAVEFORM:APOSition " + str(position))
+
+        v_offset = self.get_vertical_offset(channel)
+        v_position = self.inst.query("DISplay:WAVEView1:CURSor:CURSOR1:HBars:APOSition?")
+
+        # self.inst.write("DISplay:WAVEView1:CURSor:CURSOR1:STATE OFF")
+        return float(v_position) - v_offset
+
+        self.inst.write
     def get_n_samples_on_display(self):
         """
         This function computes the number of samples displayed on the screen
@@ -283,6 +313,7 @@ class MSO54:
         t_division = self.get_scale()
         n_samples = int(n_divisions*t_division*samplerate)
         return n_samples
+
 
 
     def read(self, n_samples=None):
@@ -310,21 +341,26 @@ class MSO54:
             self.inst.write(':Data:Stop ' + str(samples))
 
             # Get scale and offset
+            ch_num = int(ch.split("CH")[1])
+            scaling_offset = self.get_vertical_offset(ch_num)
             verticalScale = float(self.inst.query('WFMOUTPre:YMULT?'))
             yOffset = float(self.inst.query('WFMOutpre:YOFF?'))
             yzero = float(self.inst.query('WFMPRE:YZERO?'))
 
+
+
             # Get the sample interval in seconds
             Ts = float(self.inst.query('WFMOutPre:XINcr?'))
-
+            # get the position of the zero point as a percentage
+            position = self.get_horizontal_position()
             # Request the waveform data
             ADC_wave = self.inst.query_ascii_values('CURVE?', container=np.array)
 
             # Read in the data from the buffer, and scale
-            self.wave[ch] = list((ADC_wave - yOffset) * verticalScale + yzero)
+            self.wave[ch] = list((ADC_wave - yOffset) * verticalScale + yzero - scaling_offset)
 
-        # Get time series
-        self.wave['t'] = np.array(Ts * np.arange(0, samples))
+        # Get time series with the trigger at the 0 point
+        self.wave['t'] = np.array(Ts * np.arange(-position*samples/100, (100-position)*samples/100))
         return self.wave
 
 
