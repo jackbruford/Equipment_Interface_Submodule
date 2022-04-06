@@ -359,10 +359,10 @@ class MSO54:
             # initialise dictionary in each element
             self.wave[ch] = {}
             # Read in the data from the buffer, and scale
-            self.wave[ch]["amp"] = list((ADC_wave - yOffset) * verticalScale + yzero - scaling_offset)
+            self.wave[ch]["Amp"] = list((ADC_wave - yOffset) * verticalScale + yzero - scaling_offset)
 
             # Get time series with the trigger at the 0 point
-            self.wave[ch]['t'] = np.array(Ts * np.arange(-position * samples / 100, (100 - position) * samples / 100))
+            self.wave[ch]['Time'] = np.array(Ts * np.arange(-position * samples / 100, (100 - position) * samples / 100))
         return self.wave
 
 
