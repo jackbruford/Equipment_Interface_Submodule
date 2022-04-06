@@ -356,11 +356,13 @@ class MSO54:
             # Request the waveform data
             ADC_wave = self.inst.query_ascii_values('CURVE?', container=np.array)
 
+            # initialise dictionary in each element
+            self.wave[ch] = {}
             # Read in the data from the buffer, and scale
-            self.wave[ch] = list((ADC_wave - yOffset) * verticalScale + yzero - scaling_offset)
+            self.wave[ch]["amp"] = list((ADC_wave - yOffset) * verticalScale + yzero - scaling_offset)
 
-        # Get time series with the trigger at the 0 point
-        self.wave['t'] = np.array(Ts * np.arange(-position*samples/100, (100-position)*samples/100))
+            # Get time series with the trigger at the 0 point
+            self.wave[ch]['t'] = np.array(Ts * np.arange(-position * samples / 100, (100 - position) * samples / 100))
         return self.wave
 
 
