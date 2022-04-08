@@ -108,7 +108,8 @@ class MSO54:
 
         self.inst.write("ACQUIRE:MODE " + mode)
 
-
+    def get_mode(self):
+        return self.inst.query("ACQUIRE:MODE?")
 
     def set_horizontal_scale(self, T_per_division):
         """
@@ -216,6 +217,11 @@ class MSO54:
         elif termination == "1M":
             self.inst.write("CH"+str(channel)+":TERMINATION 1.0E6")
 
+    def get_channel_terminationn(self, channel: int):
+        if channel > 4 or channel < 1:
+            raise ValueError("Invalid channel number")
+        return float(self.inst.query("CH" + str(channel) + ":TERMINATION?"))
+
     def set_channel_bandwidth(self, channel: int, bandwidth: str):
         """
         Sets the bandwidth of the channel
@@ -238,6 +244,11 @@ class MSO54:
             self.inst.write("CH"+str(channel)+":BANDWIDTH 500E6")
         elif bandwidth == "1GHz":
             self.inst.write("CH"+str(channel)+":BANDWIDTH 1E9")
+    def get_channel_bandwidth(self, channel):
+        if channel > 4 or channel < 1:
+            raise ValueError("Invalid channel number")
+
+        return float(self.inst.query("CH"+str(channel)+":BANDWIDTH?"))
 
     def set_channel_ext_attenuation(self, channel: int, gain: float):
         """
@@ -249,7 +260,6 @@ class MSO54:
         if channel > 4 or channel < 1:
             raise ValueError("Invalid channel number")
         self.inst.write("CH" + str(channel) + ":PROBEFUNC:EXTATTEN " + str(gain))
-
 
     def set_displayed_channels(self, channels: list, waveveiw = 1):
         """
@@ -265,6 +275,13 @@ class MSO54:
             else:
                 self.inst.write("DISplay:WAVEView" + str(waveveiw) + ":CH" + str(channel_num + 1) + ":STATE 0")
 
+    def set_samplerate(self, samplerate: float):
+        """ sets the sample rate of the scope
+        :arg samplerate: is the number of GS/s"""
+        if samplerate not in [500, 250, 125, 62.5, 25, 12.5, 6.25, 3.125, 1.5625, 1.25]:
+            raise ValueError("samplerate must be one of must be one of 500, 250, 125, 62.5, 25, 12.5, 6.25, 3.125, 1.5625, 1.25")
+
+        self.inst.write("HORIZONTAL:MODE:SAMPLERATE " + str(samplerate*1e9))
 
     def get_samplerate(self):
         """
