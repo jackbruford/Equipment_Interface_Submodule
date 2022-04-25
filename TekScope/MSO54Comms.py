@@ -26,7 +26,7 @@ class MSO54:
         # On some PC this doesnt work if the following two lines are uncommented
         # self.inst.read_termination = '\n'
         self.inst.write_termination = '\n'
-        self.inst.timeout = 1000
+        self.inst.timeout = 2000
         try:
             print("Opened connection with ", self.inst.query('*IDN?;'))
         except Exception as e:
