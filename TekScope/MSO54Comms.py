@@ -1,7 +1,6 @@
 ### Interface code for Tektronix MSO54 Oscilloscope ###
 # @author: J Bruford, based on MATLAB script written by: G Jones
 import time
-
 import pyvisa
 import numpy as np
 from struct import unpack
@@ -23,10 +22,9 @@ class MSO54:
         if hasattr(self, 'inst'):
             raise ConnectionError('MSO54 already open. Exiting without doing anything.')
 
-        self.inst = self.rm.open_resource(self.RESOURCE_STRING)
+        self.inst = self.rm.open_resource(self.RESOURCE_STRING, write_termination='\n', send_end=True) 
         # On some PC this doesnt work if the following two lines are uncommented
-        # self.inst.read_termination = '\n'
-        self.inst.write_termination = '\n'
+
         self.inst.timeout = 25000
         try:
             print("Opened connection with ", self.inst.query('*IDN?;'))
@@ -147,9 +145,10 @@ class MSO54:
         try:
             offset_float = float(offset)
         except ValueError as e:
-            print("Scope returned something that couldnt be processed into a float")
-            offset = self.inst.query("CH" + str(ch) + ":OFFSET?")
-            offset_float = float(offset)
+            raise e
+            # print("Scope returned something that couldnt be processed into a float")
+            # offset = self.inst.query("CH" + str(ch) + ":OFFSET?")
+            # offset_float = float(offset)
 
         return offset_float
 
@@ -181,7 +180,7 @@ class MSO54:
         width.
         :return float - position as a percentage of the screen width
         """
-        return float(self.inst.write("HORIZONTAL:POSITION?"))
+        return float(self.inst.query("HORIZONTAL:POSITION?"))
 
     def set_set_viewstyle(self, mode, waveveiw=1):
         """
@@ -334,8 +333,6 @@ class MSO54:
         # self.inst.write("DISplay:WAVEView1:CURSor:CURSOR1:STATE OFF")
         return float(v_position) - v_offset
 
-        self.inst.write
-
     def get_n_samples_on_display(self):
         """
         This function computes the number of samples displayed on the screen
@@ -391,9 +388,10 @@ class MSO54:
                 raise e
             try:
                 scaling_offset = self.get_vertical_offset(ch_num)
-            except ValueError:
+            except ValueError as e:
                 print("ch_num: ", ch)
-                self.inst.reas
+
+                raise e
             verticalScale = float(self.inst.query('WFMOUTPre:YMULT?'))
             yOffset = float(self.inst.query('WFMOutpre:YOFF?'))
             yzero = float(self.inst.query('WFMPRE:YZERO?'))
@@ -409,7 +407,8 @@ class MSO54:
             self.wave[ch] = {}
             # Read in the data from the buffer, and scale
             self.wave[ch]["Amp"] = list((ADC_wave - yOffset) * verticalScale + yzero - scaling_offset)
-
+            if len(self.wave[ch]["Amp"])==1:
+                raise ValueError("Amp only contains one point")
             # Get time series with the trigger at the 0 point
             self.wave[ch]['Time'] = np.array(
                 Ts * np.arange(-position * samples / 100, (100 - position) * samples / 100))
