@@ -22,7 +22,7 @@ class MSO54:
         if hasattr(self, 'inst'):
             raise ConnectionError('MSO54 already open. Exiting without doing anything.')
 
-        self.inst = self.rm.open_resource(self.RESOURCE_STRING, write_termination='\n', send_end=True) 
+        self.inst = self.rm.open_resource(self.RESOURCE_STRING, write_termination='\n', send_end=True)
         # On some PC this doesnt work if the following two lines are uncommented
 
         self.inst.timeout = 25000
@@ -331,7 +331,10 @@ class MSO54:
         v_position = self.inst.query("DISplay:WAVEView1:CURSor:CURSOR1:HBars:APOSition?")
 
         # self.inst.write("DISplay:WAVEView1:CURSor:CURSOR1:STATE OFF")
-        return float(v_position) - v_offset
+        position = float(v_position) - v_offset
+        if position < -1e36:
+            raise ValueError("Measurement returning invalid data, measuement = "+str(position))
+        return position
 
     def get_n_samples_on_display(self):
         """
@@ -392,9 +395,20 @@ class MSO54:
                 print("ch_num: ", ch)
 
                 raise e
-            verticalScale = float(self.inst.query('WFMOUTPre:YMULT?'))
-            yOffset = float(self.inst.query('WFMOutpre:YOFF?'))
-            yzero = float(self.inst.query('WFMPRE:YZERO?'))
+            retry_counter = 0
+            while True:
+                try:
+                    verticalScale = float(self.inst.query('WFMOUTPre:YMULT?'))
+                    yOffset = float(self.inst.query('WFMOutpre:YOFF?'))
+                    yzero = float(self.inst.query('WFMPRE:YZERO?'))
+                    break
+                except pyvisa.errors.VisaIOError as e:
+                    retry_counter += 1
+                    if retry_counter<3:
+                        continue
+                    else:
+                        print("Attempted 3 retries")
+                        raise e
 
             # Get the sample interval in seconds
             Ts = float(self.inst.query('WFMOutPre:XINcr?'))
