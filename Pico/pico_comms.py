@@ -96,7 +96,8 @@ class tc08():
             print("Error code: ", error_code)
             raise ConnectionError("Could not connect to temperature logger")
         else:
-            print("Running tc-08 with sample interval of ", interval, " ms")
+            # print("Running tc-08 with sample interval of ", interval, " ms")
+            pass
         return interval
 
     def record(self):
@@ -123,6 +124,20 @@ class tc08():
                 measurement.append(timeBuffer[0] / 1000)
             measurement.append(tempBuffer[0])
         return measurement
+
+    def getTemp(self, channel):
+        self.run()
+        time.sleep(self.interval/1000)
+        T = self.record()
+        self.stop()
+        if type(T[channel]) is float:
+            output = T[channel]
+        elif type(T[channel]) is list:
+            output = T[channel][-1]
+        else:
+            raise IndexError
+        return output
+
 
     def stop(self):
         '''Stops the logger from streaming'''
@@ -242,7 +257,7 @@ class ADC_20():
             raise ConnectionError("Could not connect to data logger")
         else:
             self.failed_measurements = 0
-            print("Running tc-08 with sample interval of ", self.interval, " ms")
+            # print("Running tc-08 with sample interval of ", self.interval, " ms")
         return self.interval
 
     def record(self, failures = 1):
