@@ -126,16 +126,30 @@ class tc08():
         return measurement
 
     def getTemp(self, channel):
+        """ Gets the temps at the current instant. channel can be a channel number or a list of channel numbers"""
         self.run()
         time.sleep(self.interval/1000)
         T = self.record()
         self.stop()
-        if type(T[channel]) is float:
-            output = T[channel]
-        elif type(T[channel]) is list:
-            output = T[channel][-1]
+        if type(channel) is int:
+            if type(T[channel]) is float:
+                output = T[channel]
+            elif type(T[channel]) is list:
+                output = T[channel][-1]
+            else:
+                raise IndexError
+        elif type(channel) is list:
+            output = []
+            for c in channel:
+                if type(T[c]) is float:
+                    output.append(T[c])
+                elif type(T[c]) is list:
+                    output.append(T[c][-1])
+                else:
+                    raise IndexError
         else:
-            raise IndexError
+            raise TypeError("invalid type for channel, channel is a "+type(channel).__name__+" not a list or int")
+
         return output
 
 
