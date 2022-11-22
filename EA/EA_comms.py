@@ -185,14 +185,14 @@ class EaDevice:
             DN = 1
         else:
             raise ValueError("Not a valid channel")
-        OVP_thre = int(25600 * OVC / self.set_v(1, channel))
+        OVP_thre = int(25600 * OVC / self.volt_nom)
         data = (OVP_thre >> 8, OVP_thre & 0b0000000011111111)
         out_message = self.make_message(SD, DN, OBJ, data)
         self.ser.write(out_message)
         time.sleep(0.01)
         if self.ser.inWaiting() > 0:
             extra = self.ser.read_all()
-            #    print('WARNING: Unexpected data received. Data:\n',extra)
+            print('WARNING: Unexpected data received. Data:\n',extra)
             print(extra)
 
     def set_OCP_threshold(self, ocp, channel):
