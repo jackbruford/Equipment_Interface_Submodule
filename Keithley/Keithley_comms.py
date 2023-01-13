@@ -9,13 +9,13 @@ class Keithley:
     def __init__(self, _v_range=100, _i_range=3):
         self.v_range = _v_range
         self.i_range = _i_range
-        self.sample_rate = 1000000
+        self.sample_rate = 20
         self.apperture = 1/self.sample_rate
         self.n_samples = 100
         rm = pyvisa.ResourceManager()
         self.inst = rm.open_resource(self.RESOURCE_STRING)
-        self.inst.read_termination ="\n"
-        self.inst.write_termination = "\n"
+        # self.inst.read_termination ="\n"
+        # self.inst.write_termination = "\n"
         self.inst.timeout = 1000
         try:
             print("Opened connection with ", self.inst.query('*IDN?;'))
@@ -29,16 +29,16 @@ class Keithley:
 
     def voltage_measurement(self):
         self.inst.write(':SENS:FUNC "VOLT:DC"')
-        self.inst.write(':SENS:FUNC "APER %f' % self.apperture)  # set the apperture duration (duration the adc intergrates over)
+        self.inst.write(':SENS:VOLT:APER %f' % self.apperture)  # set the apperture duration (duration the adc intergrates over)
         self.inst.write(':SENS:VOLT:RANG %f' % self.v_range)
         self.inst.write(':SENS:VOLT:INP AUTO') # Set input impedance
-        print(self.inst.query(':READ?'))
+        return self.inst.query(':READ?')
 
-    def current_measurement(self):
-        self.inst.write(':SENS:FUNC "CURR:DC')
-        self.inst.write(':SENS:FUNC "APER %f' % self.apperture)  # set the apperture duration (duration the adc intergrates over)
+    def current_measurement(self, aper=0.05):
+        self.inst.write(':SENS:FUNC "CURR:DC"')
+        self.inst.write(':SENS:CURR:APER %f' % aper)  # set the apperture duration (duration the adc intergrates over) default 0.24 is max 1e-5 is min
         self.inst.write(':SENS:CURR:RANG %f' % self.i_range)
-        print(self.inst.query(':READ?'))
+        return self.inst.query(':READ?')
 
     def zero_measurement(self):
         self.inst.write('FUNC "VOLT"')
