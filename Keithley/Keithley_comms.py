@@ -6,9 +6,9 @@ import numpy as np
 
 
 class Keithley:
-    def __init__(self, _v_range=100):
+    def __init__(self, _v_range=100, _i_range=3):
         self.v_range = _v_range
-
+        self.i_range = _i_range
         self.sample_rate = 1000000
         self.apperture = 1/self.sample_rate
         self.n_samples = 100
@@ -27,11 +27,17 @@ class Keithley:
         self.inst.write('*LANG SCPI')
         # print(self.inst.query('*LANG?;'))
 
-    def basic_meas(self):
+    def voltage_measurement(self):
         self.inst.write(':SENS:FUNC "VOLT:DC"')
         self.inst.write(':SENS:FUNC "APER %f' % self.apperture)  # set the apperture duration (duration the adc intergrates over)
         self.inst.write(':SENS:VOLT:RANG %f' % self.v_range)
-        self.inst.write(':SENS:VOLT:INP AUTO')
+        self.inst.write(':SENS:VOLT:INP AUTO') # Set input impedance
+        print(self.inst.query(':READ?'))
+
+    def current_measurement(self):
+        self.inst.write(':SENS:FUNC "CURR:DC')
+        self.inst.write(':SENS:FUNC "APER %f' % self.apperture)  # set the apperture duration (duration the adc intergrates over)
+        self.inst.write(':SENS:CURR:RANG %f' % self.i_range)
         print(self.inst.query(':READ?'))
 
     def zero_measurement(self):
