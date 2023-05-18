@@ -34,6 +34,30 @@ class Keithley:
         self.inst.write(':SENS:VOLT:INP AUTO') # Set input impedance
         return self.inst.query(':READ?')
 
+    def thermistor_measurement(self,type,n_wire=2):
+        """
+        n_wire - the number of wire measurement, default 2 wire measurement
+        type > The type of RTD:
+        ▪ PT100
+        ▪ PT385
+        ▪ PT3916
+        ▪ D100
+        ▪ F100
+
+        """
+        self.inst.write(':SENS:FUNC "TEMP"')
+
+        if n_wire == 2:
+            self.inst.write(':SENS:TEMP:TRANSDUCER RTD')
+            self.inst.write(':SENS:TEMP:RTD:TWO '+type)
+        elif n_wire == 3:
+            self.inst.write(':SENS:TEMP:TRANSDUCER TRTD')
+            self.inst.write(':SENS:TEMP:RTD:THREE '+type)
+        elif n_wire == 4:
+            self.inst.write(':SENS:TEMP:TRANSDUCER FRTD')
+            self.inst.write(':SENS:TEMP:RTD:FOUR "'+type)
+        return float(self.inst.query(':READ?'))
+
     def current_measurement(self, aper=0.05):
         self.inst.write(':SENS:FUNC "CURR:DC"')
         self.inst.write(':SENS:CURR:APER %f' % aper)  # set the apperture duration (duration the adc intergrates over) default 0.24 is max 1e-5 is min
@@ -143,8 +167,13 @@ class DMM6500(Keithley):
         Asset code 28859 resource string = 'USB0::0x05E6::0x6500::04497105::INSTR'
         No asset code resource string = 'USB0::0x05E6::0x6500::04396331::INSTR'
     """
-    def __init__(self, _Resource_String = 'USB0::0x05E6::0x6500::04396331::INSTR',_v_range=100):
-        self.RESOURCE_STRING = _Resource_String
+    def __init__(self, _Resource_String = 'USB0::0x05E6::0x6500::04396331::INSTR',AssetSticker=False,_v_range=100):
+        """ Can input Resource sting manually and this will set the resource sting or can set Asset sticker true or
+        false, if asset sticker set true then it will override an input resource string """
+        if AssetSticker:
+            self.RESOURCE_STRING ="USB0::0x05E6::0x6500::04497105::INSTR"
+        else:
+            self.RESOURCE_STRING = _Resource_String
         super().__init__(_v_range)
 
 class MM2000(Keithley):
