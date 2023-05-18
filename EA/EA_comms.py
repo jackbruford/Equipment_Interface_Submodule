@@ -496,7 +496,7 @@ class PSB9000():
 
 
 class PS2400B(EaDevice):
-    def __init__(self, v_nom):
+    def __init__(self, v_nom,i_nom):
         """
         Init method for PS2400B device, takes v_nom as a parameter which is the power supply max voltage (either 42 or 84)
         """
@@ -509,7 +509,7 @@ class PS2400B(EaDevice):
         self.state = {}
         self.output = {'V_ps': 0, 'I_ps': 0}
         self.volt_nom = v_nom
-        self.curr_nom = 10
+        self.curr_nom = i_nom
         self.p_nom = 160
 
     def connect(self, port_string, brate=57600, parity=serial.PARITY_NONE, tout=2):
@@ -585,7 +585,7 @@ class PS2400B(EaDevice):
             extra = self.ser.read_all()
 
     def set_v(self, voltage, channel):  # applies to both the load and the power supply
-        if voltage > self.volt_nom:
+        if voltage >= self.volt_nom:
             print('WARNING: Requested voltage is greater than device maximum. Ignoring request.')
             return
         SD = self.make_SD(2, 1, 1, 3)
@@ -610,6 +610,7 @@ class PS2400B(EaDevice):
     def set_i(self, current, channel):  # applies to both the load and the power supply
         if current > self.curr_nom:
             print('WARNING: Requested current is greater than device maximum. Ignoring request.')
+            print("Nominal current: "+str(self.curr_nom))
             return
         SD = self.make_SD(2, 1, 1, 3)
         OBJ = 51
@@ -619,6 +620,8 @@ class PS2400B(EaDevice):
             DN = 1
         else:
             raise ValueError("Not a valid channel")
+
+
         i = int(25600 * current / self.curr_nom)
         data = (i >> 8, i & 0b11111111)
         out_message = self.make_message(SD, DN, OBJ, data)
