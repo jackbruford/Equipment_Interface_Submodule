@@ -9,7 +9,7 @@ from ctypes import cdll
 
 class tc08():
     def __init__(self):
-        tc08_adr = "C:/Program Files/Pico Technology/PicoLog/usbtc08.dll"
+        tc08_adr = "C:/Program Files/Pico Technology/PicoLog 6/usbtc08.dll"
         self.picodll = cdll.LoadLibrary(tc08_adr)
         self.handle = None
         self.channels = {}
