@@ -324,12 +324,12 @@ class EL9000(EaDevice):
 # This class is for the PSB9000 bidirectional DC supply/load, using SCPI comms. It also works for the PSI9750-06DT
 # On the PSI9750-06DT it was found necessary to increase the timeout to 500ms in the power supply communications menu
 class PSB9000():
-    def __init__(self):
+    def __init__(self, V_nom =750,I_nom=60):
         self.ser = serial.Serial()
         self.state = {}
         self.output = {'v': 0, 'i': 0, 'p': 0}
-        self.volt_nom = 750
-        self.curr_nom = 60
+        self.volt_nom = V_nom
+        self.curr_nom = I_nom
         self.p_nom = 15000
 
     def connect(self, port_string, brate=57600, parity='O', tout=2):
@@ -383,7 +383,7 @@ class PSB9000():
             resp = self.ser.readline().decode('utf-8')
 
             if resp != '':
-                if float(resp.split('V')[0]) == volt:
+                if abs(float(resp.split('V')[0]) - volt) < 0.1:
                     # print("Voltage set to:", float(resp.split('V')[0]), " V, ", volt, " V requested")
                     return 0
             print("Failed to set voltage, retrying. Response:", resp)
@@ -407,7 +407,8 @@ class PSB9000():
                 time.sleep(RESPONSE_WAIT)
                 resp = self.ser.readline().decode('utf-8')
                 if resp != '':
-                    if float(resp.split('A')[0]) == current:
+                    print(resp.split('A')[0])
+                    if abs(float(resp.split('A')[0]) - current) < 0.1:
                         # print("Current set to:", float(resp.split('A')[0]), " A")
                         return 0
                 retry_counter += 1
@@ -420,7 +421,7 @@ class PSB9000():
                 time.sleep(RESPONSE_WAIT)
                 resp = self.ser.readline().decode('utf-8')
                 if resp != '':
-                    if float(resp.split('A')[0]) == current:
+                    if abs(float(resp.split('A')[0]) - current) < 0.1:
                         print("Current set to:", float(resp.split('A')[0]), " A")
                         return 0
                 retry_counter += 1
@@ -444,7 +445,7 @@ class PSB9000():
         self.output['v'] = v
         self.output['i'] = i
         self.output['p'] = p
-        print(self.output)
+        return self.output
 
     def output_on(self, output: int, RETRIES:int =2):
         """
@@ -486,11 +487,11 @@ class PSB9000():
             print(err_mess)
         return [err, err_mess]
 
-    def set_ovp_threshold(self, ovp):
+    def set_OVP_threshold(self, ovp):
         # TODO: Intermittently working. Seems to work best immediately after switch on
         self.ser.write(bytes('VOLT:PROT ' + str(ovp) + '\n', 'ascii'))
 
-    def set_ocp_threshold(self, ocp):
+    def set_OCP_threshold(self, ocp):
         # TODO: Intermittently working. Seems to work best immediately after switch on
         self.ser.write(bytes('SOUR:CURR:PROT ' + str(ocp) + '\n', 'ascii'))
 

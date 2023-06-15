@@ -32,7 +32,7 @@ class Keithley:
         self.inst.write(':SENS:VOLT:APER %f' % self.apperture)  # set the apperture duration (duration the adc intergrates over)
         self.inst.write(':SENS:VOLT:RANG %f' % self.v_range)
         self.inst.write(':SENS:VOLT:INP AUTO') # Set input impedance
-        return self.inst.query(':READ?')
+        return float(self.inst.query(':READ?'))
 
     def thermistor_measurement(self,type,n_wire=2):
         """
@@ -62,7 +62,7 @@ class Keithley:
         self.inst.write(':SENS:FUNC "CURR:DC"')
         self.inst.write(':SENS:CURR:APER %f' % aper)  # set the apperture duration (duration the adc intergrates over) default 0.24 is max 1e-5 is min
         self.inst.write(':SENS:CURR:RANG %f' % self.i_range)
-        return self.inst.query(':READ?')
+        return float(self.inst.query(':READ?'))
 
     def zero_measurement(self):
         self.inst.write('FUNC "VOLT"')
