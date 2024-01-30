@@ -1,4 +1,15 @@
-import pyvisa
+"""
+It is reccomended to install pyvisa using pip install -U pyvisa
+and the NI-visa backend from https://www.ni.com/en/support/downloads/drivers/download.ni-visa.html
+it has been found that pyvisa-py backend cannot connect to some of the lab equipment
+"""
+try:
+    import pyvisa
+except ImportError as e:
+    print("Error -> ", e)
+    print('It is recommended to install pyvisa using pip install -U pyvisa \n',
+          'and the NI-visa backend from https://www.ni.com/en/support/downloads/drivers/download.ni-visa.html\n',
+          'it has been found that pyvisa-py backend cannot connect to some of the lab equipment')
 
 import time
 import matplotlib.pyplot as plt
