@@ -126,11 +126,35 @@ class tc08():
         return measurement
 
     def getTemp(self, channel):
-        """ Gets the temps at the current instant. channel can be a channel number or a list of channel numbers"""
+        """ Gets the temps at the current instant. Starting and stopping recording. channel can be a channel number or a list of channel numbers"""
         self.run()
         time.sleep(self.interval/1000)
         T = self.record()
         self.stop()
+        if type(channel) is int:
+            if type(T[channel]) is float:
+                output = T[channel]
+            elif type(T[channel]) is list:
+                output = T[channel][-1]
+            else:
+                raise IndexError
+        elif type(channel) is list:
+            output = []
+            for c in channel:
+                if type(T[c]) is float:
+                    output.append(T[c])
+                elif type(T[c]) is list:
+                    output.append(T[c][-1])
+                else:
+                    raise IndexError
+        else:
+            raise TypeError("invalid type for channel, channel is a "+type(channel).__name__+" not a list or int")
+
+        return output
+
+    def getLatestTemp(self, channel):
+        """ Gets the most recent temps assuming the logger is running. channel can be a channel number or a list of channel numbers"""
+        T = self.record()
         if type(channel) is int:
             if type(T[channel]) is float:
                 output = T[channel]
@@ -164,7 +188,7 @@ class tc08():
 
 class ADC_20():
     def __init__(self):
-        pico_adr = "C:/Program Files/Pico Technology/PicoLog/picohrdl.dll"
+        pico_adr = "C:/Program Files/Pico Technology/PicoLog 6/picohrdl.dll"
         self.picodll = cdll.LoadLibrary(pico_adr)
         self.handle = None
         self.channels = {}
@@ -302,6 +326,57 @@ class ADC_20():
                     measurement.append(sample_measurement)
                 self.failed_measurements = 0
             return measurement
+
+    def getMeasurement(self, channel):
+        """ Gets a single measument at the current instant, running and stopping the logger. channel can be a channel number or a list of channel numbers"""
+        self.run()
+        time.sleep(self.interval/1000)
+        T = self.record()
+        self.stop()
+        if type(channel) is int:
+            if type(T[channel]) is float:
+                output = T[channel]
+            elif type(T[channel]) is list:
+                output = T[channel][-1]
+            else:
+                raise IndexError
+        elif type(channel) is list:
+            output = []
+            for c in channel:
+                if type(T[c]) is float:
+                    output.append(T[c])
+                elif type(T[c]) is list:
+                    output.append(T[c][-1])
+                else:
+                    raise IndexError
+        else:
+            raise TypeError("invalid type for channel, channel is a "+type(channel).__name__+" not a list or int")
+
+        return output
+
+    def getLatestMeasurement(self, channel):
+        """ Gets the most recent measument from the ADC assuming it is already running. channel can be a channel number or a list of channel numbers"""
+        V = self.record()
+        if type(channel) is int:
+            if type(V[channel]) is float:
+                output = V[channel]
+            elif type(V[channel]) is list:
+                output = V[channel][-1]
+            else:
+                raise IndexError
+        elif type(channel) is list:
+            output = []
+            for c in channel:
+                if type(V[c]) is float:
+                    output.append(V[c])
+                elif type(V[c]) is list:
+                    output.append(V[c][-1])
+                else:
+                    raise IndexError
+        else:
+            raise TypeError("invalid type for channel, channel is a "+type(channel).__name__+" not a list or int")
+
+        return output
     def stop(self):
         '''Stops the logger from streaming'''
         self.picodll.HRDLStop(self.handle)
