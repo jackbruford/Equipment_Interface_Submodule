@@ -56,6 +56,53 @@ class MSO54:
         self.inst.write('TRIG:A:MODE NORMAL')
         self.inst.write('ACQuire:StopAfter Sequence')
 
+    def set_edge_trigger(self,source,direction, level, coupling="NOISEREJ"):
+        """
+        Used to set the trigger mode to edge on the scope
+        source: channel to trigger off (1,2,3 or 4)
+        direction: rising or falling edge or both (RISE,FALL,EITHER)
+        level: level of the trigger in volts
+        coupling:  {DC|HFRej|LFRej|NOISErej} (DC selects DC trigger coupling, which passes all input signals to the trigger circuitry.
+            HFRej coupling attenuates signals above 50 kHz before passing the signals to the trigger circuitry.
+            LFRej coupling attenuates signals below 80 kHz before passing the signals to the trigger circuitry.
+            NOISErej coupling provides stable triggering by increasing the trigger hysteresis.
+            Increased hysteresis reduces the trigger sensitivity to noise but can require greater
+            trigger signal amplitude.)
+
+        """
+        self.inst.write('TRIG:A:TYPE EDGE')
+        self.inst.write('TRIG:A:EDGE:SOURCE CH'+str(source))
+        self.inst.write('TRIG:A:EDGE:SLOPE ' +  direction)
+        self.inst.write('TRIG:A:EDGE:COUPLING '+ coupling)
+        self.inst.write('TRIG:A:LEVEL ' + str(level))
+        self.inst.write('TRIG:A:MODE NORMAL')
+        self.inst.write('ACQuire:StopAfter Sequence')
+
+    def set_pulsewidth_trigger(self,source,level, when="LESS", highLimit=0,lowLimit=150e-9,logicQualification="OFF",polarity="POSITIVE"):
+        """
+        Used to set the trigger mode to pulsewidth
+        source: 1,2,3, or 4
+        level: voltage of trigger
+        when: This command specifies to trigger when a pulse is detected with a width (duration) that is less than,
+         greater than, equal to, or unequal to a specified value OR whose width falls outside of or within a specified
+         range of two values {LESSthan|MOREthan|EQual|UNEQual|WIThin|OUTside}
+        highlimit: highlimit for pulsewidth in micro-seconds
+        lowlimit: lower limit for pulsewidth in micro-seconds
+        logicQualification: specifies whether to use logic qualification for a pulse width trigger (ON or OFF)
+        polarity: NEGATIVE or POSITIVE
+        """
+        self.inst.write('TRIG:A:TYPE WIDTH')
+        self.inst.write('TRIG:A:PULSEWIDTH:HIGHLIMIT '+str(highLimit))
+        self.inst.write('TRIG:A:PULSEWIDTH:LOWLIMIT '+str(lowLimit))
+        self.inst.write('TRIG:A:PULSEWIDTH:LOGICQUALIFICATION '+str(logicQualification))
+        self.inst.write('TRIG:A:PULSEWIDTH:POLARITY '+str(polarity))
+        self.inst.write('TRIG:A:PULSEWIDTH:SOURCE CH'+str(source))
+        self.inst.write('TRIG:A:PULSEWIDTH:WHEN '+str(when))
+        self.inst.write('TRIG:A:LEVEL:CH'+str(source)+' '+str(level))
+        self.inst.write('TRIG:A:MODE NORMAL')
+        self.inst.write('ACQuire:StopAfter Sequence')
+
+
     def run(self):
         """
         This command sets the scope to continually acquire data
