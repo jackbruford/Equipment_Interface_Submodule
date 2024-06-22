@@ -3,6 +3,8 @@
 import time
 import pyvisa
 import numpy as np
+import copy
+
 from struct import unpack
 
 
@@ -473,4 +475,4 @@ class MSO54:
             # Get time series with the trigger at the 0 point
             self.wave[ch]['Time'] = np.array(
                 Ts * np.arange(-position * samples / 100, (100 - position) * samples / 100))
-        return self.wave
+        return copy.deepcopy(self.wave)
