@@ -230,7 +230,7 @@ class ADC_20():
         The dictionary should take the form {0:'C', 1:'K, 2:'K'...}. The number key 
         is the channel number and the corresponding string the thermocouple type. 
         Note that channel 0 is reserved for cold junction compensation and must be 'C'.
-        range is a dict of form {0:'C', 1:'2.5', 2:'1.25'...} where the value entered sets the voltage
+        range is a dict of form {0:' ', 1:'2.5', 2:'1.25'...} where the value entered sets the voltage
         measurement range +/- 1.25V or +/-2.5V
         '''
         channel_count = ctypes.c_int()
