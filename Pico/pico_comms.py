@@ -225,11 +225,13 @@ class ADC_20():
         else:
             print('Mains rejection set correctly')
 
-    def setChannels(self, channels, numsamples=1):
+    def setChannels(self, channels, range, numsamples=1):
         '''Sets the channel arrangement as specified by the dictionary 'channels'. 
         The dictionary should take the form {0:'C', 1:'K, 2:'K'...}. The number key 
         is the channel number and the corresponding string the thermocouple type. 
         Note that channel 0 is reserved for cold junction compensation and must be 'C'.
+        range is a dict of form {0:'C', 1:'2.5', 2:'1.25'...} where the value entered sets the voltage
+        measurement range +/- 1.25V or +/-2.5V
         '''
         channel_count = ctypes.c_int()
         ch_flag = self.picodll.HRDLGetNumberOfEnabledChannels(self.handle, ctypes.byref(channel_count))
@@ -241,10 +243,18 @@ class ADC_20():
         numchannels = 0
         channel_scaling = []
         for i in channels:
+            if not channels[i] == ' ':
+                if range[i] == '2.5':
+                    vrange = 0
+                elif range[i] == '1.25':
+                    vrange = 1
+                else:
+                    raise ValueError("range incorrectly defined. all enabled channels must have an entry of '1.25' or '2.5'")
+
             if channels[i] == 'D':
-                ch_set = self.picodll.HRDLSetAnalogInChannel(self.handle, i, 1, 0, 0)
+                ch_set = self.picodll.HRDLSetAnalogInChannel(self.handle, i, 1, vrange, 0)
             elif channels[i] == 'S':
-                ch_set = self.picodll.HRDLSetAnalogInChannel(self.handle, i, 1, 0, 1)
+                ch_set = self.picodll.HRDLSetAnalogInChannel(self.handle, i, 1, vrange, 1)
             elif channels[i] == ' ':
                 continue
             if not ch_set:
