@@ -267,7 +267,10 @@ class ADC_20():
                 maxAdc = ctypes.c_int()
                 raw_adc = self.picodll.HRDLGetMinMaxAdcCounts(self.handle, ctypes.byref(minAdc), ctypes.byref(maxAdc),
                                                               i)
-                channel_scaling.append(2500 / maxAdc.value)
+                if vrange == 0:
+                    channel_scaling.append(2500 / maxAdc.value)
+                elif vrange == 1:
+                    channel_scaling.append(1250 / maxAdc.value)
             numchannels = numchannels + 1
         self.channels = channels
         self.numchannels = numchannels
